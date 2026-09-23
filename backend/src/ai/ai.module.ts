@@ -16,5 +16,6 @@ import { DocumentsController } from './documents.controller';
   imports: [CrmModule, InventoryModule, BillingModule, DashboardModule],
   providers: [AnthropicProvider, BusinessToolsService, ChatService, AnalyticsService, DocumentsService],
   controllers: [ChatController, AnalyticsController, DocumentsController],
+  exports: [AnthropicProvider, AnalyticsService, DocumentsService],
 })
 export class AiModule {}
