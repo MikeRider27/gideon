@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-plane text-ink-primary dark:bg-plane-dark dark:text-ink-primary-dark;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #c3c2b7;
+  border-radius: 4px;
+}
