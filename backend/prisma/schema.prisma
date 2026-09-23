@@ -1,0 +1,301 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+enum OpportunityStage {
+  NEW
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  ORDERED
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CANCELLED
+}
+
+enum SalesOrderStatus {
+  DRAFT
+  CONFIRMED
+  FULFILLED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum StockMovementType {
+  PURCHASE_IN
+  SALE_OUT
+  ADJUSTMENT
+}
+
+enum AutomationType {
+  LOW_STOCK_CHECK
+  INVOICE_OVERDUE_CHECK
+  DAILY_REPORT
+}
+
+enum AutomationStatus {
+  SUCCESS
+  FAILURE
+  SKIPPED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(EMPLOYEE)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  salesOrders SalesOrder[] @relation("SalesOrderOwner")
+  chatSessions ChatSession[]
+
+  @@map("users")
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  name      String
+  email     String?
+  phone     String?
+  company   String?
+  address   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  opportunities Opportunity[]
+  salesOrders   SalesOrder[]
+  invoices      Invoice[]
+
+  @@map("customers")
+}
+
+model Opportunity {
+  id          String           @id @default(uuid())
+  title       String
+  stage       OpportunityStage @default(NEW)
+  value       Decimal          @default(0) @db.Decimal(14, 2)
+  expectedCloseDate DateTime?
+  notes       String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String
+
+  @@map("opportunities")
+}
+
+model Supplier {
+  id        String   @id @default(uuid())
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products       Product[]
+  purchaseOrders PurchaseOrder[]
+
+  @@map("suppliers")
+}
+
+model Product {
+  id              String   @id @default(uuid())
+  sku             String   @unique
+  name            String
+  description     String?
+  unitPrice       Decimal  @default(0) @db.Decimal(14, 2)
+  costPrice       Decimal  @default(0) @db.Decimal(14, 2)
+  stockQuantity   Int      @default(0)
+  reorderThreshold Int     @default(10)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  supplier   Supplier? @relation(fields: [supplierId], references: [id])
+  supplierId String?
+
+  purchaseOrderItems PurchaseOrderItem[]
+  salesOrderItems    SalesOrderItem[]
+  stockMovements     StockMovement[]
+
+  @@map("products")
+}
+
+model StockMovement {
+  id        String            @id @default(uuid())
+  type      StockMovementType
+  quantity  Int
+  note      String?
+  createdAt DateTime          @default(now())
+
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String
+
+  @@map("stock_movements")
+}
+
+model PurchaseOrder {
+  id        String              @id @default(uuid())
+  code      String              @unique
+  status    PurchaseOrderStatus @default(DRAFT)
+  notes     String?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  supplierId String
+
+  items PurchaseOrderItem[]
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id             String  @id @default(uuid())
+  quantity       Int
+  quantityReceived Int   @default(0)
+  unitCost       Decimal @db.Decimal(14, 2)
+
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  purchaseOrderId String
+
+  product   Product @relation(fields: [productId], references: [id])
+  productId String
+
+  @@map("purchase_order_items")
+}
+
+model SalesOrder {
+  id        String           @id @default(uuid())
+  code      String           @unique
+  status    SalesOrderStatus @default(DRAFT)
+  notes     String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  customer   Customer @relation(fields: [customerId], references: [id])
+  customerId String
+
+  owner   User?   @relation("SalesOrderOwner", fields: [ownerId], references: [id])
+  ownerId String?
+
+  items    SalesOrderItem[]
+  invoices Invoice[]
+
+  @@map("sales_orders")
+}
+
+model SalesOrderItem {
+  id       String  @id @default(uuid())
+  quantity Int
+  unitPrice Decimal @db.Decimal(14, 2)
+
+  salesOrder   SalesOrder @relation(fields: [salesOrderId], references: [id], onDelete: Cascade)
+  salesOrderId String
+
+  product   Product @relation(fields: [productId], references: [id])
+  productId String
+
+  @@map("sales_order_items")
+}
+
+model Invoice {
+  id        String        @id @default(uuid())
+  code      String        @unique
+  status    InvoiceStatus @default(DRAFT)
+  issueDate DateTime      @default(now())
+  dueDate   DateTime
+  total     Decimal       @db.Decimal(14, 2)
+  notes     String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  customer   Customer @relation(fields: [customerId], references: [id])
+  customerId String
+
+  salesOrder   SalesOrder? @relation(fields: [salesOrderId], references: [id])
+  salesOrderId String?
+
+  payments Payment[]
+
+  @@map("invoices")
+}
+
+model Payment {
+  id        String   @id @default(uuid())
+  amount    Decimal  @db.Decimal(14, 2)
+  method    String   @default("transfer")
+  paidAt    DateTime @default(now())
+
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId String
+
+  @@map("payments")
+}
+
+model AutomationLog {
+  id        String           @id @default(uuid())
+  type      AutomationType
+  status    AutomationStatus
+  summary   String
+  details   Json?
+  createdAt DateTime         @default(now())
+
+  @@map("automation_logs")
+}
+
+model ChatSession {
+  id        String   @id @default(uuid())
+  title     String   @default("Nueva conversacion")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  messages ChatMessage[]
+
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  role      String
+  content   String
+  createdAt DateTime @default(now())
+
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId String
+
+  @@map("chat_messages")
+}
