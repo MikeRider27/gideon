@@ -8,7 +8,7 @@
     "start:dev": "nest start --watch",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
-    "prisma:seed": "ts-node prisma/seed.ts"
+    "prisma:seed": "ts-node --transpile-only prisma/seed.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
@@ -44,6 +44,6 @@
     "@types/passport-jwt": "^4.0.1"
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node --transpile-only prisma/seed.ts"
   }
 }

@@ -18,15 +18,12 @@ async function main() {
     console.log(`Usuario admin creado: ${adminEmail} / Admin123!`);
   }
 
-  const supplier = await prisma.supplier.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000001' },
-    update: {},
-    create: {
-      id: '00000000-0000-0000-0000-000000000001',
-      name: 'Proveedor Demo S.A.',
-      email: 'ventas@proveedordemo.com',
-    },
-  });
+  let supplier = await prisma.supplier.findFirst({ where: { email: 'ventas@proveedordemo.com' } });
+  if (!supplier) {
+    supplier = await prisma.supplier.create({
+      data: { name: 'Proveedor Demo S.A.', email: 'ventas@proveedordemo.com' },
+    });
+  }
 
   const productsData = [
     { sku: 'SKU-001', name: 'Laptop Pro 14"', unitPrice: 1200, costPrice: 900, stockQuantity: 15, reorderThreshold: 5 },
@@ -42,28 +39,24 @@ async function main() {
     });
   }
 
-  const customer = await prisma.customer.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000002' },
-    update: {},
-    create: {
-      id: '00000000-0000-0000-0000-000000000002',
-      name: 'Cliente Demo',
-      email: 'contacto@clientedemo.com',
-      company: 'Cliente Demo Corp',
-    },
-  });
+  let customer = await prisma.customer.findFirst({ where: { email: 'contacto@clientedemo.com' } });
+  if (!customer) {
+    customer = await prisma.customer.create({
+      data: { name: 'Cliente Demo', email: 'contacto@clientedemo.com', company: 'Cliente Demo Corp' },
+    });
+  }
 
-  await prisma.opportunity.upsert({
-    where: { id: '00000000-0000-0000-0000-000000000003' },
-    update: {},
-    create: {
-      id: '00000000-0000-0000-0000-000000000003',
-      title: 'Renovacion de equipos de oficina',
-      customerId: customer.id,
-      stage: 'PROPOSAL',
-      value: 15000,
-    },
-  });
+  const existingOpportunity = await prisma.opportunity.findFirst({ where: { customerId: customer.id } });
+  if (!existingOpportunity) {
+    await prisma.opportunity.create({
+      data: {
+        title: 'Renovacion de equipos de oficina',
+        customerId: customer.id,
+        stage: 'PROPOSAL',
+        value: 15000,
+      },
+    });
+  }
 
   console.log('Seed completado');
 }
